@@ -1,0 +1,33 @@
+Note: These commands were selected so that two backups against the same database that has no changes
+will produce the same file, byte-by-byte. This is important for the comparison tool to work correctly 
+and not keep flagging the same backup data as different. As an example, SqlPackage creating .bacpac 
+files will use random GUIDs in the output. The commands below have options set to avoid datestamps in 
+output that would make two identical backups different.
+
+
+
+For MYSQL:
+	1. You'll need MySQL or MaraiaDB installed on your machine - you may be able to get mysqldump seperately from the full DB install.
+
+	2. Run Example backup command to run with the following properties:
+		Server: yourServer
+		Username: yourUsername
+		Password (Notice NO space between -p and the password): yourPassword
+		Database Name: yourDatabaseName
+		File To Write To: %filename%
+
+		"c:\Program Files\MariaDb 10.6\bin\mysqldump" --no-tablespaces --hex-blob --max-allowed-packet=10554432 --skip-dump-date -h yourServer -u yourUsername -pyourPassword yourDatabaseName -r \"%filename%\"
+
+
+
+For MSSQL:
+	1. Install mssql-scripter (run cmd "pip install mssql-scripter" - it's a python program) https://github.com/microsoft/mssql-scripter/blob/dev/doc/installation_guide.md 
+
+	2. The backup command to run with the following properties:
+		Server: yourServer
+		Username: yourUsername
+		Password: yourPassword
+		Database Name: yourDatabaseName
+		File To Write To: %fileName%
+
+	"C:\Python312\python" -X utf8 -m mssqlscripter -S yourServer -U yourUsername -P yourPassword -d yourDatabaseName --schema-and-data --exclude-types Database --exclude-use-database --exclude-headers -f "%fileName%" 

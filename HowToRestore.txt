@@ -1,0 +1,7 @@
+For MSSSQL .sql files, use the SQLCmd tool, example for:
+	Server = EPROJECT\SQLEXPRESS 
+	Database = TestIPATImport 
+	File to Execute: 20240629_2009.sql
+"C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\SQLCMD.EXE" -S EPROJECT\SQLEXPRESS -d TestIPATImport -i 20240629_2009.sql -a 32767
+
+For MySQL .sql files, use HeidiSQL to run the file against a specific database.

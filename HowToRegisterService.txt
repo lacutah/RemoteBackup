@@ -1,0 +1,5 @@
+Place the output of publish command wherever you'd like, and run the following commands in an administrator command prompt
+replacing the directory name with the one you've chosen:
+
+sc.exe create "Remote SQL Backup" binpath="C:\Program Files\RemoteSQLBackup\RemoteSQLBackup.exe"                                              
+sc.exe description "Remote SQL Backup" "Runs backups on remote SQL databases using the specified commands found in its config file."
