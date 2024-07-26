@@ -1,7 +1,17 @@
 For MSSSQL .sql files, use the SQLCmd tool, example for:
-	Server = EPROJECT\SQLEXPRESS 
+	Server = SqlServer\InstanceName
 	Database = TestIPATImport 
 	File to Execute: 20240629_2009.sql
-"C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\SQLCMD.EXE" -S EPROJECT\SQLEXPRESS -d TestIPATImport -i 20240629_2009.sql -a 32767
+	(SQL) Username = username
+	(SQL) Password = password
 
-For MySQL .sql files, use HeidiSQL to run the file against a specific database.
+"C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\SQLCMD.EXE" -S SqlServer\InstanceName -d TestIPATImport -i 20240629_2009.sql -a 32767 -U username -P password
+
+For MySQL .sql files, use HeidiSQL to run the file against a specific database (may cause encoding errors if don't select UTF-8)
+or from command prompt (example):
+	Server = someRemoteServer.com
+	Database = databaseName
+	(MySQL) Username = username
+	(MySQL) Password = password
+	file to execute: c:\someFile.sql
+"c:\Program Files\MariaDB 10.6\bin\mysql.exe" -h someRemoteServer.com -u username --password=password -D databaseName -e "source c:\someFile.sql"
