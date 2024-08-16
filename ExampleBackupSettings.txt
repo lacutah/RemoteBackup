@@ -1,0 +1,32 @@
+Place the following or equivilant into the appsettings.json (inside the outer braces)
+
+  "BackupSettings": [
+      {
+        "Name": "Example MSSQL Backup",
+        "Program": "C:\\Python312\\python",
+        "ProgramParameters": "-X utf8 -m mssqlscripter -S yourDatabaseServerAddress -U yourUserName -P yourPassword -d yourDatabaseName --schema-and-data --exclude-types Database --exclude-use-database --exclude-headers -f \"%filename%\"",
+        "FrequencyTimeSpan": "6:00",
+        "TimeOfDay": "12:10 AM",
+        "KeepMostRecents": 18,
+        "KeepDays": 7,
+        "KeepWeeks": 4,
+        "KeepMonths": 6,
+        "BackupFileExtension": "sql",
+        "BackupFolder": "c:\\SomeLocalPath\\SomeLocalSubPath\\Example MSSQL Backup",
+        "ZIPResults": true
+      },
+      {
+        "Name": "Example MySQL Backup",
+        "Program": "\"c:\\Program Files\\MariaDb 10.6\\bin\\mysqldump\"",
+        "ProgramParameters": "--no-tablespaces --hex-blob --max-allowed-packet=10554432 --skip-dump-date -h yourDatabaseServerAddress -u yourDatabaseName -pyourPassword yourDatabaseName -r \"%filename%\"",
+        "FrequencyTimeSpan": "6:00",
+        "TimeOfDay": "12:15 AM",
+        "KeepMostRecents": 18,
+        "KeepDays": 7,
+        "KeepWeeks": 4,
+        "KeepMonths": 6,
+        "BackupFileExtension": "sql",
+        "BackupFolder": "c:\\SomeLocalPath\\SomeLocalSubPath\\Example MySQL Backup",
+        "ZIPResults": true
+      }
+    ]
