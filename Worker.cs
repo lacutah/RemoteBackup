@@ -96,101 +96,109 @@ public class Worker : BackgroundService
 
     private void RunBackup(object? backupSettingsId)
     {
-
-        int id = (int?)backupSettingsId ?? 0;
-        var backupSetting = backupSettings.Where(x => x.Id == id).FirstOrDefault();
-        if (backupSetting == default)
-            return;
-
-        runningBackups.Add(id);
-
-        var fileName = $"{futureBackupInfo[id].ToString(fileDateNameFormat)}{(backupSetting.BackupFileExtension.Trim().StartsWith('.') ? "" : ".")}{backupSetting.BackupFileExtension.Trim()}";
-        var fileNameWithFolder = Path.Combine(backupSetting.BackupFolder, fileName);
-
-        // Make sure folder exists.
-        var diFolder = new DirectoryInfo(backupSetting.BackupFolder);
-        if (!diFolder.Exists)
-            diFolder.Create();
-
-        var psi = new ProcessStartInfo(backupSetting.Program, backupSetting.ProgramParameters?.Replace("%filename%", fileNameWithFolder, StringComparison.OrdinalIgnoreCase) ?? string.Empty)
-        { CreateNoWindow = true, UseShellExecute = false, LoadUserProfile = true };
-
-        Process? p = null;
+        BackupSetting? backupSetting = null;
         try
         {
-            p = Process.Start(psi);
-        }
-        catch (Exception ex)
-        {
-            logger?.LogError(ex, "The backup for \"{Name}\" failed to start.", backupSetting.Name);
-        }
+            int id = (int?)backupSettingsId ?? 0;
+            backupSetting = backupSettings.Where(x => x.Id == id).FirstOrDefault();
+            if (backupSetting == default)
+                return;
 
-        var commandSucceeded = false;
-        if (p != null)
-        {
-            p.WaitForExit();
+            runningBackups.Add(id);
 
-            // See if any failed.
-            if (p.ExitCode != 0)
-                logger?.LogError("The backup for \"{Name}\" failed with exit code {ExitCode}.", backupSetting.Name, p.ExitCode);
-            else
-                commandSucceeded = true;
+            var fileName = $"{futureBackupInfo[id].ToString(fileDateNameFormat)}{(backupSetting.BackupFileExtension.Trim().StartsWith('.') ? "" : ".")}{backupSetting.BackupFileExtension.Trim()}";
+            var fileNameWithFolder = Path.Combine(backupSetting.BackupFolder, fileName);
 
+            // Make sure folder exists.
+            var diFolder = new DirectoryInfo(backupSetting.BackupFolder);
+            if (!diFolder.Exists)
+                diFolder.Create();
+
+            var psi = new ProcessStartInfo(backupSetting.Program, backupSetting.ProgramParameters?.Replace("%filename%", fileNameWithFolder, StringComparison.OrdinalIgnoreCase) ?? string.Empty)
+            { CreateNoWindow = true, UseShellExecute = false, LoadUserProfile = true };
+
+            Process? p = null;
             try
             {
-                // Log that it completed and close the process.
-                logger?.LogInformation("Completed backup for \"{Name}\" in {TimeTaken} to {FileName} with Exit Code {ExitCode}.",
-                    backupSetting.Name, p.StartTime.Subtract(p.ExitTime), fileName, p.ExitCode);
-                p.Close();
+                p = Process.Start(psi);
             }
             catch (Exception ex)
             {
-                logger?.LogError(ex, "There was a problem reading process end information for \"{Name}\".", backupSetting.Name);
+                logger?.LogError(ex, "The backup for \"{Name}\" failed to start.", backupSetting.Name);
             }
-            finally
+
+            var commandSucceeded = false;
+            if (p != null)
             {
-                p.Dispose();
+                p.WaitForExit();
+
+                // See if any failed.
+                if (p.ExitCode != 0)
+                    logger?.LogError("The backup for \"{Name}\" failed with exit code {ExitCode}.", backupSetting.Name, p.ExitCode);
+                else
+                    commandSucceeded = true;
+
+                try
+                {
+                    // Log that it completed and close the process.
+                    logger?.LogInformation("Completed backup for \"{Name}\" in {TimeTaken} to {FileName} with Exit Code {ExitCode}.",
+                        backupSetting.Name, p.StartTime.Subtract(p.ExitTime), fileName, p.ExitCode);
+                    p.Close();
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError(ex, "There was a problem reading process end information for \"{Name}\".", backupSetting.Name);
+                }
+                finally
+                {
+                    p.Dispose();
+                }
             }
-        }
 
-        if (!commandSucceeded)
-        {
-            // Remove the file if it was created.
-            if (Path.Exists(fileNameWithFolder)) File.Delete(fileNameWithFolder);
-        }
-
-        // Cleanup any old files and check if we're the same.
-        if (!isCancelled && commandSucceeded)
-            Cleanup(backupSetting, fileNameWithFolder);
-
-        // ZIP up the file.
-        if (!isCancelled 
-            && commandSucceeded 
-            && backupSetting.ZIPResults 
-            && !backupSetting.BackupFileExtension.EndsWith(zipFileExtension) 
-            && Path.Exists(fileNameWithFolder)) // It may have been turned into .SameAsPrevious.zip 0 length file by Cleanup
-        {
-            using (var zipArchive = ZipFile.Open(Path.Combine(backupSetting.BackupFolder, Path.GetFileNameWithoutExtension(fileNameWithFolder) + zipFileExtension), ZipArchiveMode.Create))
-                zipArchive.CreateEntryFromFile(fileNameWithFolder, fileName, CompressionLevel.SmallestSize);
-
-            // Delete the original file.
-            File.Delete(fileNameWithFolder);
-            fileNameWithFolder = Path.Combine(backupSetting.BackupFolder, Path.GetFileNameWithoutExtension(fileNameWithFolder) + zipFileExtension);
-            fileName = Path.GetFileName(fileNameWithFolder);
-        }
-
-        lock (timers)
-        {
-            // Reset the  timer for next schedule backup.
-            if (!isCancelled && timers.TryGetValue(id, out var timer))
+            if (!commandSucceeded)
             {
-                futureBackupInfo[id] = backupSetting.GetNextRunTime(DateTime.Now);
-                timer.Change(futureBackupInfo[id] > DateTime.Now ? futureBackupInfo[id].Subtract(DateTime.Now) : TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+                // Remove the file if it was created.
+                if (Path.Exists(fileNameWithFolder)) File.Delete(fileNameWithFolder);
             }
-        }
 
-        // Remove ourselves from running status.
-        runningBackups.Remove(id);
+            // Cleanup any old files and check if we're the same.
+            if (!isCancelled && commandSucceeded)
+                Cleanup(backupSetting, fileNameWithFolder);
+
+            // ZIP up the file.
+            if (!isCancelled
+                && commandSucceeded
+                && backupSetting.ZIPResults
+                && !backupSetting.BackupFileExtension.EndsWith(zipFileExtension)
+                && Path.Exists(fileNameWithFolder)) // It may have been turned into .SameAsPrevious.zip 0 length file by Cleanup
+            {
+                using (var zipArchive = ZipFile.Open(Path.Combine(backupSetting.BackupFolder, Path.GetFileNameWithoutExtension(fileNameWithFolder) + zipFileExtension), ZipArchiveMode.Create))
+                    zipArchive.CreateEntryFromFile(fileNameWithFolder, fileName, CompressionLevel.SmallestSize);
+
+                // Delete the original file.
+                File.Delete(fileNameWithFolder);
+                fileNameWithFolder = Path.Combine(backupSetting.BackupFolder, Path.GetFileNameWithoutExtension(fileNameWithFolder) + zipFileExtension);
+                fileName = Path.GetFileName(fileNameWithFolder);
+            }
+
+            lock (timers)
+            {
+                // Reset the  timer for next schedule backup.
+                if (!isCancelled && timers.TryGetValue(id, out var timer))
+                {
+                    futureBackupInfo[id] = backupSetting.GetNextRunTime(DateTime.Now);
+                    timer.Change(futureBackupInfo[id] > DateTime.Now ? futureBackupInfo[id].Subtract(DateTime.Now) : TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+                }
+            }
+
+            // Remove ourselves from running status.
+            runningBackups.Remove(id);
+        } 
+        catch (Exception ex)
+        {
+            const string unknownErrorMsg = "An unexpected error occurred while running the backup process for {backupSettingName}.";
+            logger.LogError(ex, unknownErrorMsg, backupSetting?.Name ?? "(unknown backup settings)");
+        }
     }
 
     private void Cleanup(BackupSetting backupSetting, string currentFullFileName)
